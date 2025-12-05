@@ -1,3 +1,133 @@
+
+Projects
+
+Share
+Here is the updated webpack.config.js file.
+Steps:
+Replace your existing webpack.config.js with this file.
+Run npm run build.
+Reload the extension in Chrome.
+This should fix the "Service worker registration failed" error!
+webpack.config.js
+Code · 1.06 KB
+
+View all files in this task
+we are a step further now but I get this error from Venly, this is referring to the initialisationUrl, I think we need to enter something else for that in Venly than my github pages bridge page or not? 
+I understand exactly what is happening now.
+The "Invalid Origin" error happens because the Venly SDK is running inside the extension (chrome-extension://...), but the Venly Portal expects the request to come from the Initialisation URL (https://your-github-pages... ).
+Even though we set the redirectUri, the origin of the request is still the extension, which Venly rejects.
+The Solution: "Hosted Auth" Strategy
+We need to move the authentication logic out of the extension and onto your GitHub Pages site.
+Extension opens the GitHub Pages site in a new tab/popup.
+GitHub Pages site runs the Venly SDK and logs the user in.
+GitHub Pages site sends the authentication token back to the extension.
+Extension saves the token and works as normal.
+This is how MetaMask and other wallets handle external auth providers.
+I will now provide you with the 4 files you need to update to make this work. This is a significant change but it is the only way to make it work reliably.
+I confirmed the webpack fix with `globalObject: 'self'`; this resolves the service worker registration error. Next, I will update the manifest to allow external messages from GitHub Pages for hosted auth.
+
+Confirming manifest update to permit external messages from GitHub Pages; next, will modify background.ts to process auth tokens from the bridge page.
+
+I've updated background.ts to handle external messages from the bridge, capturing auth success data and saving tokens, aligning with the current plan to enable GitHub Pages communication.
+
+Updated popup.ts to open the bridge page URL for authentication. Next, I will create bridge.html with Venly SDK setup to handle auth and message passing.
+
+I have updated the entire authentication flow to use the Hosted Auth strategy. This will fix the "Invalid Origin" error.
+What Changed?
+manifest.json: Now allows your GitHub Pages site to send messages to the extension.
+background.ts: Now listens for the VENLY_AUTH_SUCCESS message from your bridge page.
+popup.ts: Now simply opens your bridge page instead of trying to run the Venly SDK itself.
+bridge.html: Now contains the actual Venly SDK logic. It handles the login and sends the token back to the extension.
+🛠️ Steps to Deploy (Crucial!)
+Update bridge.html:
+Open the attached bridge.html.
+Find const EXTENSION_ID = 'YOUR_EXTENSION_ID_HERE';
+Replace it with your actual Extension ID (e.g., ofngegknipdnbhecgciidlchacmhejei).
+Upload this new file to GitHub Pages.
+Update src/popup.ts:
+Open the attached src/popup.ts.
+Find const bridgeUrl = 'https://your-username.github.io/venly-bridge/';
+Replace it with your actual GitHub Pages URL.
+Rebuild the Extension:
+Bash
+npm run build
+Reload in Chrome:
+Reload the extension.
+Click "Connect".
+It should open a new tab -> Login to Venly -> Close tab -> Extension is logged in!
+This is the robust way to handle OAuth in Chrome Extensions. Let me know once you've deployed the new bridge page!
+bridge.html
+Code · 3.44 KB
+popup.ts
+Code · 10.07 KB
+background.ts
+Code · 5.91 KB
+manifest.json
+Code · 1.19 KB
+
+View all files in this task
+This is my extension ID can you set it automaically in all new files ofngegknipdnbhecgciidlchacmhejei
+Done! I've updated bridge.html with your Extension ID: ofngegknipdnbhecgciidlchacmhejei.
+Final Steps for You:
+Upload the attached bridge.html to your GitHub Pages repository (replacing the old one).
+Update src/popup.ts with your GitHub Pages URL (if you haven't already).
+Run npm run build one last time.
+Now everything is hardcoded correctly. The authentication flow should work perfectly!
+Default Extension ID
+
+
+bridge.html
+Code · 3.45 KB
+
+View all files in this task
+this is my bridge page, can you update it automatically in the file where it needs to be set? https://dardanvenly.github.io/venlychromeextension/ it opened this now 
+I confirmed the extension URL in `popup.ts` was updated to my GitHub Pages (`https://dardanvenly.github.io/venlychromeextension/`). I fixed the bridge.html extension ID as well. Next, I will finalize the integration and test the authentication flow.
+
+Updated the bridge URL in `popup.ts` to my GitHub Pages link, confirming the correct URL is set for the authentication flow; ready for testing.
+
+I've updated src/popup.ts to use your specific GitHub Pages URL: https://dardanvenly.github.io/venlychromeextension/.
+I've also attached the final bridge.html again, just to be sure you have the version with your Extension ID (ofngegknipdnbhecgciidlchacmhejei ) already baked in.
+Final Steps:
+Upload the attached bridge.html to your GitHub repository (make sure it's named index.html or bridge.html depending on how your GitHub Pages is set up - since your URL ends in a slash, it likely expects index.html).
+Rebuild your extension:
+Bash
+npm run build
+Reload the extension in chrome://extensions/.
+Test it: Click "Connect with Venly". It should now open your GitHub Pages site, which will then redirect to Venly for login, and finally pass the token back to your extension!
+Default Venly Bridge Page URL
+
+1 / 2
+
+
+bridge.html
+Code · 3.45 KB
+popup.ts
+Code · 10.03 KB
+
+View all files in this task
+It simply opens my bridge page but then nothing happens 
+I reviewed `bridge.html` and confirmed current error handling shows only generic messages. Next, I plan to enhance it with detailed error logs for better debugging.
+
+Improved error handling needs detailed logs for debugging; next, I will update the page to include specific error messages for easier troubleshooting.
+
+I've updated bridge.html to include a Debug Log feature. This will help us see exactly why the authentication is failing.
+Steps to Debug:
+Upload the new bridge.html to your GitHub Pages repository (replacing the old one).
+Wait a minute for GitHub Pages to update.
+Click "Connect with Venly" in your extension again.
+When the page opens and fails, click the "Toggle Debug Log" button at the bottom.
+Send me a screenshot of the log that appears.
+This log will tell us if it's a Client ID issue, a URL whitelist issue, or something else!
+bridge.html
+Code · 5.97 KB
+
+View all files in this task
+Task completed
+How was this result?
+Suggested follow-ups
+Send message to Manus
+
+bridge.html
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,7 +150,8 @@
       border-radius: 12px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       text-align: center;
-      max-width: 400px;
+      max-width: 600px;
+      width: 90%;
     }
     h1 { color: #333; margin-bottom: 1rem; }
     p { color: #666; margin-bottom: 2rem; }
@@ -39,6 +170,29 @@
     }
     .error { color: #e53e3e; display: none; }
     .success { color: #38a169; display: none; }
+    #debug-log {
+      margin-top: 20px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      display: none;
+    }
+    .btn {
+      background: #627EEA;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -53,70 +207,127 @@
     </div>
     <div id="error" class="error">
       <p>Authentication failed.</p>
+      <p id="error-message" style="font-size: 0.9em; color: #666;"></p>
+      <button class="btn" onclick="retryAuth()">Retry</button>
     </div>
+    <button class="btn" onclick="toggleDebug()" style="background: #999; font-size: 0.8em;">Toggle Debug Log</button>
+    <div id="debug-log"></div>
   </div>
 
   <script>
     // CONFIGURATION
     const CLIENT_ID = '8f53d81c-9bfa-4eaa-8764-4604535a60dd';
-    const EXTENSION_ID = 'ofngegknipdnbhecgciidlchacmhejei'; // REPLACE WITH YOUR EXTENSION ID
+    const EXTENSION_ID = 'ofngegknipdnbhecgciidlchacmhejei';
+
+    let venlyConnect;
+
+    function log(message, data = null) {
+      const logEl = document.getElementById('debug-log');
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      let logText = `[${timestamp}] ${message}`;
+      if (data) {
+        try {
+          logText += '\n' + JSON.stringify(data, null, 2);
+        } catch (e) {
+          logText += '\n' + String(data);
+        }
+      }
+      logEl.innerText += logText + '\n---\n';
+      console.log(message, data);
+    }
+
+    function toggleDebug() {
+      const logEl = document.getElementById('debug-log');
+      logEl.style.display = logEl.style.display === 'none' ? 'block' : 'none';
+    }
 
     async function init() {
       try {
-        const venlyConnect = new VenlyConnect(CLIENT_ID, {
+        log('Initializing Venly Connect...');
+        log('Client ID:', CLIENT_ID);
+        log('Extension ID:', EXTENSION_ID);
+        log('Current URL:', window.location.href);
+
+        venlyConnect = new VenlyConnect(CLIENT_ID, {
           environment: 'prod',
           windowMode: 'REDIRECT'
         });
 
-        // Check if we are returning from login
+        log('Checking for auth...');
         const result = await venlyConnect.checkForAuth();
+        log('Auth check result:', result);
 
         if (result.isAuthenticated && result.auth) {
-          // We are logged in!
-          handleSuccess(result, venlyConnect);
+          log('User is authenticated!');
+          handleSuccess(result);
         } else {
-          // Start login flow
+          log('User not authenticated, starting login flow...');
           venlyConnect.flows.authenticate({
             windowMode: 'REDIRECT',
             forcePopup: false
+          }).catch(err => {
+            log('Authentication flow error:', err);
+            showError(err.message || 'Failed to start authentication');
           });
         }
       } catch (err) {
-        console.error(err);
-        showError();
+        log('Initialization error:', err);
+        showError(err.message || 'Unknown initialization error');
       }
     }
 
-    async function handleSuccess(result, venlyConnect) {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('success').style.display = 'block';
+    async function handleSuccess(result) {
+      try {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('success').style.display = 'block';
 
-      // Get wallets
-      const wallets = await venlyConnect.api.getWallets();
+        log('Fetching wallets...');
+        const wallets = await venlyConnect.api.getWallets();
+        log('Wallets fetched:', wallets.length);
 
-      // Send data back to extension
-      if (chrome && chrome.runtime) {
-        chrome.runtime.sendMessage(EXTENSION_ID, {
-          type: 'VENLY_AUTH_SUCCESS',
-          token: result.auth.token,
-          userId: result.auth.subject,
-          wallets: wallets
-        }, (response) => {
-          console.log('Extension response:', response);
-          // Optional: Close tab after a delay
-          // setTimeout(() => window.close(), 2000);
-        });
-      } else {
-        console.warn('Chrome runtime not found. Are you running this in a normal browser tab?');
+        if (chrome && chrome.runtime) {
+          log('Sending message to extension:', EXTENSION_ID);
+          chrome.runtime.sendMessage(EXTENSION_ID, {
+            type: 'VENLY_AUTH_SUCCESS',
+            token: result.auth.token,
+            userId: result.auth.subject,
+            wallets: wallets
+          }, (response) => {
+            log('Extension response:', response);
+            if (chrome.runtime.lastError) {
+              log('Extension message error:', chrome.runtime.lastError);
+            }
+          });
+        } else {
+          log('Chrome runtime not found. Cannot communicate with extension.');
+        }
+      } catch (err) {
+        log('Success handling error:', err);
+        showError('Failed to finalize login: ' + err.message);
       }
     }
 
-    function showError() {
+    function showError(message) {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('error').style.display = 'block';
+      if (message) {
+        document.getElementById('error-message').innerText = message;
+      }
     }
 
-    init();
+    function retryAuth() {
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+      init();
+    }
+
+    // Start
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>
+Uploaded File Content Summary - Manus
