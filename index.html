@@ -124,7 +124,7 @@
         });
 
         log('Checking for auth...');
-        const result = await venlyConnect.checkForAuth();
+        const result = await venlyConnect.checkAuthenticated();
         log('Auth check result:', result);
 
         if (result.isAuthenticated && result.auth) {
